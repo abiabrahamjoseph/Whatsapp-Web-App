@@ -10,6 +10,7 @@ import {
   Handle,
   Position
 } from '@xyflow/react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import '@xyflow/react/dist/style.css';
 import './Automations.css';
 
@@ -44,12 +45,26 @@ const initialEdges = [
 const initialFlows = [];
 
 export default function Automations({ showToast }) {
-  const [flows, setFlows] = useState(initialFlows);
+  const [flows, setFlows] = useLocalStorage('wa_auto_flows', initialFlows);
   const [activeView, setActiveView] = useState('list');
   const [selectedFlow, setSelectedFlow] = useState(null);
   
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(localStorage.getItem('wa_auto_nodes') ? JSON.parse(localStorage.getItem('wa_auto_nodes')) : initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(localStorage.getItem('wa_auto_edges') ? JSON.parse(localStorage.getItem('wa_auto_edges')) : initialEdges);
+
+  // Persistence for the current working flow's nodes and edges
+  const [storedNodes, setStoredNodes] = useLocalStorage('wa_auto_nodes', initialNodes);
+  const [storedEdges, setStoredEdges] = useLocalStorage('wa_auto_edges', initialEdges);
+
+  // Sync state to storage whenever it changes
+  React.useEffect(() => {
+    setStoredNodes(nodes);
+  }, [nodes, setStoredNodes]);
+
+  React.useEffect(() => {
+    setStoredEdges(edges);
+  }, [edges, setStoredEdges]);
+  
   const [selectedNode, setSelectedNode] = useState(null);
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#cbd5e1', strokeWidth: 2 } }, eds)), [setEdges]);

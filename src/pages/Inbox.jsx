@@ -53,18 +53,40 @@ export default function Inbox({ showToast }) {
     setMessageInput('');
     showToast('Message sent');
     
-    // Simulate auto-reply payload payload
+    // Check for Automation Triggers (Workflows)
+    const storedNodes = JSON.parse(localStorage.getItem('wa_auto_nodes') || '[]');
+    const storedEdges = JSON.parse(localStorage.getItem('wa_auto_edges') || '[]');
+    
+    // Find Trigger nodes that match the user's message keyword
+    const matchedTrigger = storedNodes.find(node => 
+      node.data.customClass === 'trigger-node' && 
+      messageInput.toLowerCase().includes(node.data.sublabel.toLowerCase().replace('keyword: "', '').replace('"', ''))
+    );
+
+    let replyText = 'This is an automated sandbox reply. The WhatsApp Cloud API is running smoothly.';
+    
+    if (matchedTrigger) {
+      // Find connected action node
+      const edge = storedEdges.find(e => e.source === matchedTrigger.id);
+      if (edge) {
+        const actionNode = storedNodes.find(n => n.id === edge.target);
+        if (actionNode && actionNode.data.customClass === 'action-node') {
+          replyText = `[Workflow Auto-Reply] ${actionNode.data.sublabel.replace('Template: ', '')}`;
+        }
+      }
+    }
+
     setTimeout(() => {
       setConversations(prev => prev.map(c => {
         if (c.id === activeContactId) {
           return {
             ...c, 
-            messages: [...c.messages, { id: Date.now()+1, text: 'This is an automated sandbox reply. The WhatsApp Cloud API is running smoothly.', type: 'received', time: 'Just now' }]
+            messages: [...c.messages, { id: Date.now()+1, text: replyText, type: 'received', time: 'Just now' }]
           };
         }
         return c;
       }));
-    }, 2000);
+    }, 1500);
   };
 
   const handleStartNewChat = () => {

@@ -40,9 +40,9 @@ function App() {
       case 'Users & Roles': return <Users showToast={showToast} currentUser={currentUser} />;
       case 'Automations': return <Automations showToast={showToast} />;
       case 'Contacts': return <Contacts showToast={showToast} setCurrentPage={setCurrentPage} />;
-      case 'Settings': return <Settings showToast={showToast} initialTab="Integration" currentUser={currentUser} />;
-      case 'My Profile Settings': return <Settings showToast={showToast} initialTab="Profile" currentUser={currentUser} />;
-      case 'Security': return <Settings showToast={showToast} initialTab="Security" currentUser={currentUser} />;
+      case 'Settings': return <Settings showToast={showToast} initialTab="Integration" currentUser={currentUser} setCurrentUser={setCurrentUser} />;
+      case 'My Profile Settings': return <Settings showToast={showToast} initialTab="Profile" currentUser={currentUser} setCurrentUser={setCurrentUser} />;
+      case 'Security': return <Settings showToast={showToast} initialTab="Security" currentUser={currentUser} setCurrentUser={setCurrentUser} />;
       default: return <PlaceholderPage title={currentPage} />;
     }
   };

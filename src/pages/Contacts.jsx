@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import Modal from '../components/Modal';
 import './Contacts.css';
 
 const initialContacts = [];
@@ -18,16 +19,23 @@ export default function Contacts({ showToast, setCurrentPage }) {
     else setSelectedIds(contacts.map(c => c.id));
   };
 
-  const handleAddContact = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: '', phone: '' });
+
+  const handleSaveContact = () => {
+    if (!formData.phone.trim()) return showToast('Mobile number is mandatory', 'warning');
+    
     const newContact = {
       id: Date.now(),
-      name: `New Contact ${contacts.length + 1}`,
-      phone: '+1 555 000 0000',
+      name: formData.name.trim() || 'Unknown',
+      phone: formData.phone.trim(),
       tags: ['Lead'],
       status: 'Opted-In'
     };
     setContacts([newContact, ...contacts]);
-    showToast('Contact added successfully!');
+    showToast('Contact added successfully!', 'success');
+    setIsModalOpen(false);
+    setFormData({ name: '', phone: '' });
   };
 
   const handleImportClick = () => {
@@ -86,7 +94,7 @@ export default function Contacts({ showToast, setCurrentPage }) {
           }}>Download Template</button>
           <button className="secondary-btn" onClick={handleExport} disabled={contacts.length === 0}>Export CSV</button>
           <button className="secondary-btn" onClick={handleImportClick}>Import CSV</button>
-          <button className="primary-btn" onClick={handleAddContact}>+ Add Contact</button>
+          <button className="primary-btn" onClick={() => setIsModalOpen(true)}>+ Add Contact</button>
         </div>
       </div>
       
@@ -135,6 +143,22 @@ export default function Contacts({ showToast, setCurrentPage }) {
           </tbody>
         </table>
       </div>
+      
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Add New Contact"
+        onConfirm={handleSaveContact}
+      >
+        <div className="form-group">
+          <label>Mobile Number <span style={{color: 'var(--danger)'}}>*</span></label>
+          <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="e.g. +1 234 567 8900" />
+        </div>
+        <div className="form-group" style={{marginTop: '16px'}}>
+          <label>Name <span style={{color: 'var(--text-muted)'}}>(Optional)</span></label>
+          <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. John Doe" />
+        </div>
+      </Modal>
     </div>
   );
 }

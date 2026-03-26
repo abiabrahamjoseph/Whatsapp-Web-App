@@ -15,40 +15,72 @@ export default function Users({ showToast, currentUser }) {
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'Agent' });
+  const [modalType, setModalType] = useState('User'); // 'User' or 'Role'
+  const [editingItem, setEditingItem] = useState(null);
+  const [userFormData, setUserFormData] = useState({ name: '', email: '', role: 'Agent' });
+  const [roleFormData, setRoleFormData] = useState({ name: '', desc: '' });
 
-  const handleOpenModal = (user = null) => {
-    if (activeTab !== 'Users') return showToast('Role editing via modal not implemented yet.', 'info');
-    
-    if (user) {
-      setEditingUser(user);
-      setFormData({ name: user.name, email: user.email, role: user.role });
+  const handleOpenModal = (item = null) => {
+    if (activeTab === 'Users') {
+      setModalType('User');
+      if (item) {
+        setEditingItem(item);
+        setUserFormData({ name: item.name, email: item.email, role: item.role });
+      } else {
+        setEditingItem(null);
+        setUserFormData({ name: '', email: '', role: 'Agent' });
+      }
     } else {
-      setEditingUser(null);
-      setFormData({ name: '', email: '', role: 'Agent' });
+      setModalType('Role');
+      if (item) {
+        setEditingItem(item);
+        setRoleFormData({ name: item.name, desc: item.desc });
+      } else {
+        setEditingItem(null);
+        setRoleFormData({ name: '', desc: '' });
+      }
     }
     setIsModalOpen(true);
   };
 
   const handleSave = () => {
-    if (!formData.name.trim() || !formData.email.trim()) return showToast('Name and Email are required', 'warning');
-    
-    if (editingUser) {
-      setUsers(prevUsers => prevUsers.map(u => 
-        u.id === editingUser.id ? { ...u, ...formData, initials: formData.name.substring(0,2).toUpperCase() } : u
-      ));
-      showToast('User updated successfully!');
+    if (modalType === 'User') {
+      if (!userFormData.name.trim() || !userFormData.email.trim()) return showToast('Name and Email are required', 'warning');
+      
+      if (editingItem) {
+        setUsers(prevUsers => prevUsers.map(u => 
+          u.id === editingItem.id ? { ...u, ...userFormData, initials: userFormData.name.substring(0,2).toUpperCase() } : u
+        ));
+        showToast('User updated successfully!');
+      } else {
+        const newUser = {
+          id: Date.now(),
+          ...userFormData,
+          initials: userFormData.name.substring(0,2).toUpperCase(),
+          status: 'Active',
+          time: 'Just now'
+        };
+        setUsers([...users, newUser]);
+        showToast(`User ${userFormData.name} created!`);
+      }
     } else {
-      const newUser = {
-        id: Date.now(),
-        ...formData,
-        initials: formData.name.substring(0,2).toUpperCase(),
-        status: 'Pending',
-        time: 'Never'
-      };
-      setUsers([...users, newUser]);
-      showToast(`Invitation sent to ${formData.email}!`);
+      if (!roleFormData.name.trim() || !roleFormData.desc.trim()) return showToast('Role Name and Description are required', 'warning');
+      
+      if (editingItem) {
+        setRoles(prevRoles => prevRoles.map(r => 
+          r.id === editingItem.id ? { ...r, ...roleFormData } : r
+        ));
+        showToast('Role updated successfully!');
+      } else {
+        const newRole = {
+          id: Date.now(),
+          ...roleFormData,
+          count: 0,
+          system: false
+        };
+        setRoles([...roles, newRole]);
+        showToast(`Role "${roleFormData.name}" created!`);
+      }
     }
     setIsModalOpen(false);
   };
@@ -70,8 +102,8 @@ export default function Users({ showToast, currentUser }) {
           <h1>Users & Roles</h1>
           <p>Manage your team members and access permissions.</p>
         </div>
-        <button className="primary-btn" onClick={() => activeTab === 'Users' ? handleOpenModal() : showToast('Role creation modal not implemented yet.', 'info')}>
-          {activeTab === 'Users' ? '+ Invite User' : '+ Create Role'}
+        <button className="primary-btn" onClick={() => handleOpenModal()}>
+          {activeTab === 'Users' ? '+ Create User' : '+ Create Role'}
         </button>
       </div>
 
@@ -139,8 +171,8 @@ export default function Users({ showToast, currentUser }) {
                         <button className="icon-btn disabled" title="System Role Cannot Be Edited">🔒</button>
                       ) : (
                         <>
-                          <button className="icon-btn" onClick={() => showToast('Edit Role panel opened', 'info')}>✏️</button>
-                          <button className="icon-btn" onClick={() => handleDeleteRole(r.id)}>🗑️</button>
+                          <button className="icon-btn" onClick={() => handleOpenModal(r)} title="Edit">✏️</button>
+                          <button className="icon-btn" onClick={() => handleDeleteRole(r.id)} title="Delete">🗑️</button>
                         </>
                       )}
                     </td>
@@ -155,27 +187,46 @@ export default function Users({ showToast, currentUser }) {
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={editingUser ? "Edit User" : "Invite User"}
+        title={modalType === 'User' ? (editingItem ? "Edit User" : "Create User") : (editingItem ? "Edit Role" : "Create Role")}
         onConfirm={handleSave}
-        confirmText={editingUser ? "Save Changes" : "Send Invite"}
+        confirmText={editingItem ? "Save Changes" : (modalType === 'User' ? "Create User" : "Create Role")}
       >
-        <div className="form-group">
-          <label>Full Name</label>
-          <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. User Name" />
-        </div>
-        <div className="form-group">
-          <label>Email Address</label>
-          <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="e.g. user@domain.com" />
-        </div>
-        <div className="form-group">
-          <label>Assign Role</label>
-          <select className="modern-select" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-            <option>Admin</option>
-            <option>Manager</option>
-            <option>Agent</option>
-          </select>
-          <p className="help-text" style={{marginTop: '8px'}}>Agents can only send and receive messages. Admins have full billing access.</p>
-        </div>
+        {modalType === 'User' ? (
+          <>
+            <div className="form-group">
+              <label>Full Name</label>
+              <input type="text" value={userFormData.name} onChange={e => setUserFormData({...userFormData, name: e.target.value})} placeholder="e.g. User Name" />
+            </div>
+            <div className="form-group">
+              <label>Email Address</label>
+              <input type="email" value={userFormData.email} onChange={e => setUserFormData({...userFormData, email: e.target.value})} placeholder="e.g. user@domain.com" />
+            </div>
+            <div className="form-group">
+              <label>Assign Role</label>
+              <select className="modern-select" value={userFormData.role} onChange={e => setUserFormData({...userFormData, role: e.target.value})}>
+                {roles.map(r => <option key={r.id}>{r.name}</option>)}
+              </select>
+              <p className="help-text" style={{marginTop: '8px'}}>Choose a role for this user to define their access permissions.</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="form-group">
+              <label>Role Name</label>
+              <input type="text" value={roleFormData.name} onChange={e => setRoleFormData({...roleFormData, name: e.target.value})} placeholder="e.g. Support Manager" />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea 
+                value={roleFormData.desc} 
+                onChange={e => setRoleFormData({...roleFormData, desc: e.target.value})} 
+                placeholder="e.g. Full access to all support tickets and messaging."
+                style={{width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', resize: 'vertical'}}
+                rows={4}
+              />
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );
