@@ -1,0 +1,180 @@
+/* index.css */
+:root {
+  /* Colors */
+  --primary-color: #0fa356;
+  --primary-dark: #008740;
+  --primary-light: #e6f7ec;
+  --bg-main: #F4F5F7;
+  --bg-sidebar: #ffffff;
+  --bg-panel: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border-color: #E2E8F0;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --info: #3B82F6;
+
+  /* Typography */
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Outfit', system-ui, sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 6px;
+  --spacing-sm: 10px;
+  --spacing-md: 18px;
+  --spacing-lg: 28px;
+  --spacing-xl: 40px;
+
+  /* Premium Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03);
+  --shadow-lg: 0 16px 32px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dark Mode 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-main: #111b21;
+    --bg-sidebar: #202c33;
+    --bg-panel: #202c33;
+    --text-main: #e9edef;
+    --text-muted: #8696a0;
+    --border-color: #2a3942;
+  }
+}
+*/
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.primary-btn {
+  background-color: #000000;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: opacity var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.primary-btn:hover {
+  opacity: 0.8;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ====================================
+   Modern Component Aesthetics 
+==================================== */
+
+/* Global Data Table Upgrades */
+.data-table, .campaigns-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.data-table th, .campaigns-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 16px;
+  border-bottom: 2px solid var(--border-color);
+}
+.data-table td, .campaigns-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-fast);
+}
+.data-table tbody tr:hover td, .campaigns-table tbody tr:hover td {
+  background-color: #fcfcfd;
+}
+
+/* Panels */
+.modal-content, .toast, .metric-card {
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid rgba(0,0,0,0.03) !important;
+}
+
+/* Avatars & Details */
+.avatar {
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.badge {
+  padding: 6px 14px !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+}
+
+/* Global Button Interactions */
+.primary-btn, .secondary-btn, .danger-btn {
+  transform: translateY(0);
+  will-change: transform;
+  border-radius: var(--radius-sm) !important;
+}
+
+.primary-btn:hover:not(:disabled), .secondary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}

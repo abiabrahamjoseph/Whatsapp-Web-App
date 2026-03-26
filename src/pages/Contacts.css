@@ -1,0 +1,31 @@
+.contacts-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.secondary-btn {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  margin-right: var(--spacing-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.secondary-btn:hover {
+  background-color: var(--border-color);
+}
+
+.tag {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+  display: inline-block;
+}
