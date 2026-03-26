@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Inbox from './pages/Inbox';
@@ -22,8 +23,8 @@ function PlaceholderPage({ title }) {
 }
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState('Dashboard');
+  const [currentUser, setCurrentUser] = useLocalStorage('wa_currentUser', null);
+  const [currentPage, setCurrentPage] = useLocalStorage('wa_currentPage', 'Dashboard');
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => {

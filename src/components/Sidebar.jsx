@@ -46,7 +46,7 @@ export default function Sidebar({ currentPage = 'Dashboard', setCurrentPage, sho
                <ul>
                  <li onClick={() => { setIsProfileOpen(false); setCurrentPage('My Profile Settings'); }}>My Profile Settings</li>
                  <li onClick={() => { setIsProfileOpen(false); setCurrentPage('Security'); }}>Security</li>
-                 <li className="danger-text" onClick={() => { setIsProfileOpen(false); showToast('Logged out securely.', 'success'); setTimeout(() => window.location.reload(), 1000); }}>Log out</li>
+                 <li className="danger-text" onClick={() => { setIsProfileOpen(false); showToast('Logged out securely.', 'success'); setTimeout(() => { localStorage.removeItem('wa_currentUser'); window.location.reload(); }, 1000); }}>Log out</li>
                </ul>
             </div>
           )}

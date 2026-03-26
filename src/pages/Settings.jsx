@@ -119,6 +119,13 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
                Connect your WhatsApp Business Account (WABA) to start messaging via the Meta Cloud API. Enter the credentials from your Meta Developer App Dashboard.
              </p>
              
+             <h4 style={{borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px'}}>0. Dashboard Backend Connection</h4>
+             <p style={{color: 'var(--text-muted)', marginBottom: '16px', marginTop: 0}}>The URL of the middleman Node.js/Python server you build to handle the Meta connection.</p>
+             <div className="form-group" style={{marginBottom: '24px'}}>
+               <label>Backend API Base URL</label>
+               <input type="url" placeholder="https://your-backend-api.com" />
+             </div>
+             
              <h4 style={{borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px'}}>1. App Configuration</h4>
              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'}}>
                <div className="form-group">
