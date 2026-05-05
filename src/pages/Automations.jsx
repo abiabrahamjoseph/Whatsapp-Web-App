@@ -49,23 +49,24 @@ export default function Automations({ showToast }) {
   const [activeView, setActiveView] = useState('list');
   const [selectedFlow, setSelectedFlow] = useState(null);
   
-  const [nodes, setNodes, onNodesChange] = useNodesState(localStorage.getItem('wa_auto_nodes') ? JSON.parse(localStorage.getItem('wa_auto_nodes')) : initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(localStorage.getItem('wa_auto_edges') ? JSON.parse(localStorage.getItem('wa_auto_edges')) : initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Persistence for the current working flow's nodes and edges
-  const [storedNodes, setStoredNodes] = useLocalStorage('wa_auto_nodes', initialNodes);
-  const [storedEdges, setStoredEdges] = useLocalStorage('wa_auto_edges', initialEdges);
-
-  // Sync state to storage whenever it changes
+  // Sync state to the active flow whenever nodes or edges change
   React.useEffect(() => {
-    setStoredNodes(nodes);
-  }, [nodes, setStoredNodes]);
-
-  React.useEffect(() => {
-    setStoredEdges(edges);
-  }, [edges, setStoredEdges]);
+    if (selectedFlow) {
+      const updatedFlow = { ...selectedFlow, nodes, edges };
+      // Check if nodes or edges actually changed to avoid infinite loops or redundant updates
+      if (JSON.stringify(selectedFlow.nodes) !== JSON.stringify(nodes) || 
+          JSON.stringify(selectedFlow.edges) !== JSON.stringify(edges)) {
+        setFlows(prevFlows => prevFlows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+        setSelectedFlow(updatedFlow);
+      }
+    }
+  }, [nodes, edges, selectedFlow, setFlows]);
   
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#cbd5e1', strokeWidth: 2 } }, eds)), [setEdges]);
 
@@ -75,16 +76,22 @@ export default function Automations({ showToast }) {
       name: `New Flow ${flows.length + 1}`,
       status: 'Draft',
       trigger: 'Not configured',
-      usage: '0'
+      usage: '0',
+      nodes: initialNodes,
+      edges: initialEdges
     };
     setFlows([...flows, newFlow]);
     setSelectedFlow(newFlow);
+    setNodes(initialNodes);
+    setEdges(initialEdges);
     setActiveView('editor');
     if(showToast) showToast('New Interactive Workspace Created!');
   };
 
   const handleSelectFlow = (flow) => {
     setSelectedFlow(flow);
+    setNodes(flow.nodes || initialNodes);
+    setEdges(flow.edges || initialEdges);
     setActiveView('editor');
   };
 
@@ -93,8 +100,26 @@ export default function Automations({ showToast }) {
     setSelectedFlow(null);
   };
 
+  const handleDeleteFlow = (e, flowId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFlows(prevFlows => prevFlows.filter(f => f.id !== flowId));
+    if (showToast) showToast('Automation flow deleted', 'warning');
+  };
+
   const onNodeClick = (event, node) => {
+    setSelectedEdge(null);
     setSelectedNode(node);
+  };
+
+  const onEdgeClick = (event, edge) => {
+    setSelectedNode(null);
+    setSelectedEdge(edge);
+  };
+
+  const onPaneClick = () => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
   };
 
   const handleAddNode = () => {
@@ -122,6 +147,13 @@ export default function Automations({ showToast }) {
     if(showToast) showToast('Node deleted', 'warning');
   };
 
+  const handleDeleteEdge = () => {
+    if(!selectedEdge) return;
+    setEdges(edges.filter(e => e.id !== selectedEdge.id));
+    setSelectedEdge(null);
+    if(showToast) showToast('Connection removed', 'warning');
+  };
+
   return (
     <div className="automations-page">
       {activeView === 'list' ? (
@@ -146,7 +178,10 @@ export default function Automations({ showToast }) {
                 <p><strong>Trigger:</strong> {flow.trigger}</p>
                 <div className="flow-footer">
                   <span>Started {flow.usage} times</span>
-                  <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleSelectFlow(flow);}}>✏️</button>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleSelectFlow(flow);}} title="Edit Flow">✏️</button>
+                    <button className="icon-btn" onClick={(e) => handleDeleteFlow(e, flow.id)} title="Delete Flow">🗑️</button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -162,8 +197,21 @@ export default function Automations({ showToast }) {
           <div className="page-header editor-header">
             <div className="header-breadcrumbs">
               <button className="icon-btn" onClick={handleBack} style={{marginRight: '8px'}}>← Back</button>
-              <div>
-                <h1>{selectedFlow?.name}</h1>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <input 
+                  type="text" 
+                  value={selectedFlow?.name || ''} 
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    if (selectedFlow) {
+                      const updatedFlow = { ...selectedFlow, name: newName };
+                      setSelectedFlow(updatedFlow);
+                      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+                    }
+                  }}
+                  title="Click to rename flow"
+                  style={{ fontSize: '1.5rem', fontWeight: '700', border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-main)', padding: 0, margin: 0, fontFamily: 'var(--font-heading)', width: '300px', cursor: 'text' }}
+                />
                 <span className="editor-subtitle">Last edited just now</span>
               </div>
             </div>
@@ -185,7 +233,8 @@ export default function Automations({ showToast }) {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onNodeClick={onNodeClick}
-                onPaneClick={() => setSelectedNode(null)}
+                onEdgeClick={onEdgeClick}
+                onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
@@ -200,7 +249,7 @@ export default function Automations({ showToast }) {
             
             <div className="editor-sidebar">
               <div className="sidebar-header">
-                <h3>{selectedNode ? `Configure Node` : 'Properties'}</h3>
+                <h3>{selectedNode ? `Configure Node` : selectedEdge ? `Connection Properties` : 'Properties'}</h3>
               </div>
               <div className="sidebar-content">
                 {selectedNode ? (
@@ -211,7 +260,9 @@ export default function Automations({ showToast }) {
                          type="text" 
                          value={selectedNode.data.label} 
                          onChange={(e) => {
-                            setNodes(nodes.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, label: e.target.value } } : n));
+                            const newLabel = e.target.value;
+                            setNodes(nds => nds.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, label: newLabel } } : n));
+                            setSelectedNode(prev => ({ ...prev, data: { ...prev.data, label: newLabel } }));
                          }} 
                       />
                     </div>
@@ -230,15 +281,22 @@ export default function Automations({ showToast }) {
                          type="text" 
                          value={selectedNode.data.sublabel} 
                          onChange={(e) => {
-                            setNodes(nodes.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, sublabel: e.target.value } } : n));
+                            const newSublabel = e.target.value;
+                            setNodes(nds => nds.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, sublabel: newSublabel } } : n));
+                            setSelectedNode(prev => ({ ...prev, data: { ...prev.data, sublabel: newSublabel } }));
                          }} 
                       />
                     </div>
                     <button className="danger-btn full-width mt-4" onClick={handleDeleteNode}>Delete Node</button>
                   </>
+                ) : selectedEdge ? (
+                  <>
+                    <p style={{color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '24px'}}>You have selected a transition between two steps. Deleting this will disconnect the automated flow.</p>
+                    <button className="danger-btn full-width" onClick={handleDeleteEdge}>Remove Connection</button>
+                  </>
                 ) : (
                   <>
-                    <p style={{color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '24px'}}>Select a node on the canvas to configure it, or drag and add entirely new steps to your flow.</p>
+                    <p style={{color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '24px'}}>Select a node on the canvas to configure it, click a connection to delete it, or add entirely new steps to your flow.</p>
                     <button className="primary-btn full-width" onClick={handleAddNode}>+ Add Step</button>
                   </>
                 )}

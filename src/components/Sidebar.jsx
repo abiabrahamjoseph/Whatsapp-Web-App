@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import './Sidebar.css';
 
 export default function Sidebar({ currentPage = 'Dashboard', setCurrentPage, showToast, currentUser }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const navItems = ['Dashboard', 'Inbox', 'Broadcasts', 'Automations', 'Contacts', 'Users & Roles', 'Settings'];
+  const [roles] = useLocalStorage('wa_roles', []);
+  
+  const allNavItems = ['Dashboard', 'Inbox', 'Broadcasts', 'Automations', 'Contacts', 'Users', 'Roles', 'Settings'];
+  const currentRoleObj = roles.find(r => r.name === currentUser?.role);
+  const navItems = currentRoleObj && currentRoleObj.permissions 
+    ? allNavItems.filter(item => {
+        if (currentRoleObj.permissions.includes(item)) return true;
+        if (currentRoleObj.permissions.includes('Users & Roles') && (item === 'Users' || item === 'Roles')) return true;
+        return false;
+      })
+    : allNavItems;
 
   return (
     <aside className="sidebar">

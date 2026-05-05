@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import './Settings.css';
 
 export default function Settings({ showToast, initialTab = 'Integration', currentUser, setCurrentUser }) {
@@ -16,7 +17,7 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
   const [token, setToken] = useState('');
   const [verifyToken, setVerifyToken] = useState('skillversity_wa_secure_2026');
 
-  const [profileData, setProfileData] = useState({ name: currentUser?.name || '', email: currentUser?.email || '', phone: '+91 98765 43210', timezone: 'Asia/Kolkata (IST)' });
+  const [profileData, setProfileData] = useState({ name: currentUser?.name || '', email: currentUser?.email || '', phone: currentUser?.phone || '+91 98765 43210', timezone: currentUser?.timezone || 'Asia/Kolkata (IST)' });
   const [securityData, setSecurityData] = useState({ currentPass: '', newPass: '', confirmPass: '', twoFactor: false });
 
   const [fbApiKey, setFbApiKey] = useState(localStorage.getItem('wa_fbApiKey') || '');
@@ -30,6 +31,32 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
   const [isVerifyingMeta, setIsVerifyingMeta] = useState(false);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [connectionState, setConnectionState] = useState('disconnected');
+
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (activeTab !== 'Integration') return;
+
+    socketRef.current = io('http://localhost:3001');
+    
+    socketRef.current.on('connection_state', (state) => {
+      setConnectionState(state);
+      if (state === 'connected') {
+        setIsGeneratingQR(false);
+        setQrCodeUrl('');
+      } else if (state === 'qr') {
+        setIsGeneratingQR(false);
+      }
+    });
+
+    socketRef.current.on('qr', (qrDataUrl) => {
+      setQrCodeUrl(qrDataUrl);
+      setIsGeneratingQR(false);
+    });
+
+    return () => socketRef.current?.disconnect();
+  }, [activeTab]);
 
   const handleSaveLeadSquared = () => {
     localStorage.setItem('wa_lsqAccessKey', lsqAccessKey);
@@ -63,21 +90,23 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
   };
 
   const handleGenerateQR = () => {
+    if (socketRef.current) {
+      socketRef.current.emit('request_qr');
+    }
     setIsGeneratingQR(true);
     setQrCodeUrl('');
-    showToast('Initializing secure multi-device session...', 'info');
-    
-    setTimeout(() => {
-      setIsGeneratingQR(false);
-      // Generate a real-looking QR code using a public API
-      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Skillversity-WhatsApp-Session-${Date.now()}`);
-      showToast('QR Code generated! Please scan with your WhatsApp app.', 'success');
-    }, 2500);
+    showToast('Waiting for QR code from server (may take up to 30s)...', 'info');
   };
 
-  const handleDisconnectQR = () => {
-    setQrCodeUrl('');
-    showToast('WhatsApp session disconnected.', 'warning');
+  const handleDisconnectQR = async () => {
+    try {
+      await fetch('http://localhost:3001/api/disconnect', { method: 'POST' });
+      setQrCodeUrl('');
+      setConnectionState('disconnected');
+      showToast('WhatsApp session disconnected.', 'warning');
+    } catch (e) {
+      showToast('Failed to disconnect from server.', 'error');
+    }
   };
   
   const handleSaveProfile = () => {
@@ -106,6 +135,44 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
      if (!securityData.currentPass || !securityData.newPass) return showToast('Please fill all password fields', 'warning');
      if (securityData.newPass !== securityData.confirmPass) return showToast('New passwords do not match', 'error');
      showToast('Security settings updated securely.', 'success');
+  };
+
+  const handleClearData = () => {
+    // Preserve current user and basic admin role
+    const userToSave = localStorage.getItem('wa_currentUser');
+    const rolesToSave = localStorage.getItem('wa_roles');
+    
+    // Attempting to preserve the admin user inside wa_users
+    let adminUser = null;
+    try {
+       const users = JSON.parse(localStorage.getItem('wa_users'));
+       if (users && users.length > 0) {
+          adminUser = users.find(u => u.role === 'Admin');
+       }
+    } catch { /* ignore error if parsing fails */ }
+    
+    localStorage.clear();
+    
+    // Restore preserved data
+    if (userToSave) localStorage.setItem('wa_currentUser', userToSave);
+    if (rolesToSave) localStorage.setItem('wa_roles', rolesToSave);
+    if (adminUser) {
+        localStorage.setItem('wa_users', JSON.stringify([adminUser]));
+    }
+    
+    showToast('Application data has been cleared (Admin data preserved). Reloading...', 'success');
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+  };
+
+  const handleResetAll = () => {
+    localStorage.clear();
+    showToast('Factory Reset Complete. Reloading...', 'success');
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
   };
 
   return (
@@ -178,6 +245,15 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
                <input type="checkbox" checked={securityData.twoFactor} onChange={e => { setSecurityData({...securityData, twoFactor: e.target.checked}); showToast(e.target.checked ? '2FA Enabled. Please link your Authenticator App.' : '2FA Disabled', 'info') }} />
                Enable Authenticator App
              </label>
+
+             <hr style={{borderColor: 'var(--border-color)', marginBottom: '24px'}} />
+             
+             <h3 style={{marginTop: 0, marginBottom: '8px', color: 'var(--text-main)'}}>Data Management</h3>
+             <p style={{color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px', marginTop: 0}}>Clear local application cache. Admin accounts will not be affected.</p>
+             <div style={{display: 'flex', gap: '16px'}}>
+               <button className="danger-btn" onClick={handleClearData} style={{padding: '10px 16px', borderRadius: '8px', background: 'var(--danger-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '500'}}>Clear Application Data</button>
+               <button className="danger-btn" onClick={handleResetAll} style={{padding: '10px 16px', borderRadius: '8px', background: '#dc2626', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '500'}}>Hard Reset All</button>
+             </div>
            </div>
          )}
 
@@ -250,16 +326,27 @@ export default function Settings({ showToast, initialTab = 'Integration', curren
                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start'}}>
                   <div style={{flex: '1', minWidth: '200px'}}>
                     <div style={{display: 'flex', gap: '16px', marginBottom: '16px'}}>
-                      <button 
-                        className="primary-btn" 
-                        onClick={handleGenerateQR} 
-                        disabled={isGeneratingQR}
-                        style={{opacity: isGeneratingQR ? 0.7 : 1}}
-                      >
-                        {isGeneratingQR ? 'Generating...' : (qrCodeUrl ? 'Refresh QR Code' : 'Generate QR Code')}
-                      </button>
-                      {qrCodeUrl && (
-                        <button className="danger-btn" onClick={handleDisconnectQR}>Disconnect Session</button>
+                      {connectionState === 'connected' ? (
+                        <>
+                          <div style={{padding: '12px 16px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: 'var(--success-color)', borderRadius: '8px', border: '1px solid var(--success-color)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500'}}>
+                            <span style={{width: '10px', height: '10px', backgroundColor: 'var(--success-color)', borderRadius: '50%', display: 'inline-block'}}></span> Connected via Baileys
+                          </div>
+                          <button className="danger-btn" onClick={handleDisconnectQR}>Disconnect Session</button>
+                        </>
+                      ) : (
+                        <>
+                          <button 
+                            className="primary-btn" 
+                            onClick={handleGenerateQR} 
+                            disabled={isGeneratingQR}
+                            style={{opacity: isGeneratingQR ? 0.7 : 1}}
+                          >
+                            {isGeneratingQR ? 'Waiting for Server...' : (qrCodeUrl ? 'Refresh QR Code' : 'Generate QR Code')}
+                          </button>
+                          {qrCodeUrl && (
+                            <button className="danger-btn" onClick={handleDisconnectQR}>Disconnect Session</button>
+                          )}
+                        </>
                       )}
                     </div>
                     {!qrCodeUrl && !isGeneratingQR && (
